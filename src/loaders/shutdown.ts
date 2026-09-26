@@ -10,7 +10,7 @@ const EXIT_FAILURE = 1;
 
 let isShuttingDown = false;
 
-async function shutdown(server: Server, reason: string, exitCode: number): Promise<void> {
+async function shutdown(server: Server, stopBackgroundJobs: () => void, reason: string, exitCode: number): Promise<void> {
   if (isShuttingDown) {
     return;
   }
@@ -25,6 +25,7 @@ async function shutdown(server: Server, reason: string, exitCode: number): Promi
   forceExitTimer.unref();
 
   let finalExitCode = exitCode;
+  stopBackgroundJobs();
   try {
     await stopServer(server);
     await disconnectDatabase();
@@ -38,18 +39,18 @@ async function shutdown(server: Server, reason: string, exitCode: number): Promi
   process.exit(finalExitCode);
 }
 
-export function registerShutdownHandlers(server: Server): void {
+export function registerShutdownHandlers(server: Server, stopBackgroundJobs: () => void): void {
   // `shutdown` catches its own errors and always ends in process.exit, so its promise never rejects.
-  process.on('SIGTERM', () => void shutdown(server, 'SIGTERM', EXIT_SUCCESS));
-  process.on('SIGINT', () => void shutdown(server, 'SIGINT', EXIT_SUCCESS));
+  process.on('SIGTERM', () => void shutdown(server, stopBackgroundJobs, 'SIGTERM', EXIT_SUCCESS));
+  process.on('SIGINT', () => void shutdown(server, stopBackgroundJobs, 'SIGINT', EXIT_SUCCESS));
 
   // Last-resort safety net: the process state is unknown, so log and shut down rather than keep serving.
   process.on('unhandledRejection', (reason) => {
     logger.fatal({ err: reason }, 'Unhandled promise rejection');
-    void shutdown(server, 'unhandledRejection', EXIT_FAILURE);
+    void shutdown(server, stopBackgroundJobs, 'unhandledRejection', EXIT_FAILURE);
   });
   process.on('uncaughtException', (error) => {
     logger.fatal({ err: error }, 'Uncaught exception');
-    void shutdown(server, 'uncaughtException', EXIT_FAILURE);
+    void shutdown(server, stopBackgroundJobs, 'uncaughtException', EXIT_FAILURE);
   });
 }

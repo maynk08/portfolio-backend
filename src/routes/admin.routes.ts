@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { authRouter } from './auth.routes.js';
 import { certificationRouter, educationRouter, experienceRouter, projectRouter, skillGroupRouter } from './content.routes.js';
+import { mediaRouter } from './media.routes.js';
 import { profileRouter } from './profile.routes.js';
 import { sectionRouter } from './section.routes.js';
 import { settingsRouter } from './settings.routes.js';
@@ -22,3 +23,4 @@ adminRouter.use('/projects', projectRouter);
 adminRouter.use('/skill-groups', skillGroupRouter);
 adminRouter.use('/education', educationRouter);
 adminRouter.use('/certifications', certificationRouter);
+adminRouter.use('/media', mediaRouter);

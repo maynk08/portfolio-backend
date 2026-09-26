@@ -1,3 +1,4 @@
+import { assertMediaReferences } from './media.service.js';
 import { ExperienceModel } from '../models/experience.model.js';
 import {
   createDocument,
@@ -21,8 +22,9 @@ export const experienceService: CrudService<CreateExperienceInput, UpdateExperie
 
   getById: async (id) => toApiDocument(await findByIdOrThrow(ExperienceModel, id, NOT_FOUND_MESSAGE)),
 
-  create: (input) => {
+  create: async (input) => {
     throwIfFieldErrors(checkDateRange(input.startDate, input.endDate, 'endDate'));
+    await assertMediaReferences([{ field: 'companyLogo', id: input.companyLogo, kind: 'image' }]);
     return createDocument(ExperienceModel, input);
   },
 
@@ -31,6 +33,7 @@ export const experienceService: CrudService<CreateExperienceInput, UpdateExperie
     throwIfFieldErrors(
       checkDateRange(input.startDate ?? existing.startDate, input.endDate === undefined ? existing.endDate : input.endDate, 'endDate'),
     );
+    await assertMediaReferences([{ field: 'companyLogo', id: input.companyLogo, kind: 'image' }]);
     return updateByIdOrThrow(ExperienceModel, id, input, NOT_FOUND_MESSAGE);
   },
 

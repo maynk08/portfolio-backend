@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createAdminClient, dataOf } from '../helpers/api-client.js';
 import { useTestDatabase } from '../helpers/database.js';
+import { createReadyMedia } from '../helpers/media.js';
 
 import type { AdminClient } from '../helpers/api-client.js';
 
@@ -19,7 +20,7 @@ const validProfile = {
   heroPhrases: ['I build APIs', 'I ship products'],
   about: '## Hello\n\nI write **TypeScript**.',
   photo: null,
-  resume: '0123456789abcdef01234567',
+  resume: null as string | null,
   socialLinks: [
     { platform: 'github', url: 'https://github.com/example', isVisible: true },
     { platform: 'email', url: 'mailto:me@example.com', isVisible: true },
@@ -46,14 +47,30 @@ describe('profile', () => {
   });
 
   it('replaces the whole profile', async () => {
-    const response = await client.put('/profile', validProfile);
+    const resume = await createReadyMedia('application/pdf');
+
+    const response = await client.put('/profile', { ...validProfile, resume });
 
     expect(response.status).toBe(200);
     expect(dataOf(response)).toMatchObject({
       ...validProfile,
+      resume,
       socialLinks: validProfile.socialLinks.map((link) => ({ label: null, ...link })),
     });
-    expect(dataOf(await client.get('/profile'))).toMatchObject({ name: 'Mayank', resume: '0123456789abcdef01234567' });
+    expect(dataOf(await client.get('/profile'))).toMatchObject({ name: 'Mayank', resume });
+  });
+
+  it('requires the photo to be an image and the resume to be a PDF', async () => {
+    const image = await createReadyMedia('image/png');
+    const pdf = await createReadyMedia('application/pdf');
+
+    const response = await client.put('/profile', { ...validProfile, photo: pdf, resume: image });
+
+    expect(response.status).toBe(422);
+    expect(response.body.errors).toEqual([
+      { field: 'photo', message: 'Must be an image' },
+      { field: 'resume', message: 'Must be a PDF' },
+    ]);
   });
 
   it('requires every field', async () => {

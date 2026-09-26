@@ -8,7 +8,7 @@ import type { FieldError } from '../../errors/app-error.js';
 import type { PaginationMeta } from '../../utils/pagination.utils.js';
 import type { ApiDocument } from '../../utils/serialize.utils.js';
 import type { PaginationQuery } from '../../validators/common.validator.js';
-import type { Model, PipelineStage, Types, UpdateQuery } from 'mongoose';
+import type { Model, PipelineStage, QueryFilter, Types, UpdateQuery } from 'mongoose';
 
 const QUERY_MAX_TIME_MS = 5_000;
 const DUPLICATE_KEY_ERROR_CODE = 11000;
@@ -31,12 +31,18 @@ export function newestFirstSort(startField: string, endField: string): PipelineS
   ];
 }
 
-export async function findPage<T>(model: Model<T>, sortStages: PipelineStage[], { page, pageSize }: PaginationQuery): Promise<Page<T>> {
+// `filter` must be built from validated values; wrap operator objects in `mongoose.trusted` so `sanitizeFilter` keeps them.
+export async function findPage<T>(
+  model: Model<T>,
+  sortStages: PipelineStage[],
+  { page, pageSize }: PaginationQuery,
+  filter: QueryFilter<T> = {},
+): Promise<Page<T>> {
   const [documents, totalItems] = await Promise.all([
     model
-      .aggregate<StoredDocument<T>>([...sortStages, { $skip: (page - 1) * pageSize }, { $limit: pageSize }])
+      .aggregate<StoredDocument<T>>([{ $match: filter }, ...sortStages, { $skip: (page - 1) * pageSize }, { $limit: pageSize }])
       .option({ maxTimeMS: QUERY_MAX_TIME_MS }),
-    model.countDocuments().maxTimeMS(QUERY_MAX_TIME_MS),
+    model.countDocuments(filter).maxTimeMS(QUERY_MAX_TIME_MS),
   ]);
   return { items: documents.map((document) => toApiDocument(document)), pagination: buildPaginationMeta(page, pageSize, totalItems) };
 }

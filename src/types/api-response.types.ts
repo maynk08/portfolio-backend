@@ -17,4 +17,5 @@ export interface ErrorResponse {
   success: false;
   message: string;
   errors?: FieldError[];
+  details?: unknown;
 }

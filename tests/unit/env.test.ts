@@ -18,6 +18,7 @@ describe('parseEnv', () => {
       mongodbUri: 'mongodb://localhost:27017/portfolio',
       logLevel: 'debug',
       jwtSecret: 'x'.repeat(32),
+      storage: null,
     });
   });
 
@@ -56,5 +57,52 @@ describe('parseEnv', () => {
 
     expect(message).toContain('MONGODB_URI');
     expect(message).not.toContain('super-secret');
+  });
+
+  describe('storage', () => {
+    const storageEnv = {
+      AWS_REGION: 'eu-central-1',
+      S3_BUCKET: 'portfolio-media',
+      AWS_ACCESS_KEY_ID: 'AKIAEXAMPLE',
+      AWS_SECRET_ACCESS_KEY: 'secret',
+    };
+
+    it('is disabled when every storage variable is empty', () => {
+      const emptyStorageEnv = {
+        AWS_REGION: '',
+        S3_BUCKET: '',
+        AWS_ACCESS_KEY_ID: '',
+        AWS_SECRET_ACCESS_KEY: '',
+        MEDIA_PUBLIC_BASE_URL: '',
+      };
+
+      expect(parseEnv({ ...validEnv, ...emptyStorageEnv }).storage).toBeNull();
+    });
+
+    it('defaults the public URL to the bucket', () => {
+      expect(parseEnv({ ...validEnv, ...storageEnv }).storage).toEqual({
+        region: 'eu-central-1',
+        bucket: 'portfolio-media',
+        accessKeyId: 'AKIAEXAMPLE',
+        secretAccessKey: 'secret',
+        publicBaseUrl: 'https://portfolio-media.s3.eu-central-1.amazonaws.com',
+      });
+    });
+
+    it('uses a custom public URL without its trailing slash', () => {
+      const storage = parseEnv({ ...validEnv, ...storageEnv, MEDIA_PUBLIC_BASE_URL: 'https://cdn.example.com/' }).storage;
+
+      expect(storage?.publicBaseUrl).toBe('https://cdn.example.com');
+    });
+
+    it('rejects a partial setup and names the missing variables', () => {
+      expect(() => parseEnv({ ...validEnv, S3_BUCKET: 'portfolio-media' })).toThrow(
+        /AWS_REGION[\s\S]*AWS_ACCESS_KEY_ID[\s\S]*AWS_SECRET_ACCESS_KEY/,
+      );
+    });
+
+    it('rejects an invalid region', () => {
+      expect(() => parseEnv({ ...validEnv, ...storageEnv, AWS_REGION: 'Frankfurt' })).toThrow(EnvValidationError);
+    });
   });
 });

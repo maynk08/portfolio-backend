@@ -1,3 +1,4 @@
+import { assertMediaReferences } from './media.service.js';
 import { ProfileModel } from '../models/profile.model.js';
 import { toApiDocument } from '../utils/serialize.utils.js';
 
@@ -25,6 +26,10 @@ export async function getProfile(): Promise<ApiDocument<StoredDocument<Profile>>
 }
 
 export async function replaceProfile(input: ProfileInput): Promise<ApiDocument<StoredDocument<Profile>>> {
+  await assertMediaReferences([
+    { field: 'photo', id: input.photo, kind: 'image' },
+    { field: 'resume', id: input.resume, kind: 'document' },
+  ]);
   const profile = await ProfileModel.findOneAndUpdate({}, { $set: input }, { returnDocument: 'after', runValidators: true }).lean();
   if (profile === null) {
     throw new Error(MISSING_PROFILE_MESSAGE);

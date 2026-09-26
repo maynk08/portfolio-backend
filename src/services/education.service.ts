@@ -1,3 +1,4 @@
+import { assertMediaReferences } from './media.service.js';
 import { EducationModel } from '../models/education.model.js';
 import {
   createDocument,
@@ -21,8 +22,9 @@ export const educationService: CrudService<CreateEducationInput, UpdateEducation
 
   getById: async (id) => toApiDocument(await findByIdOrThrow(EducationModel, id, NOT_FOUND_MESSAGE)),
 
-  create: (input) => {
+  create: async (input) => {
     throwIfFieldErrors(checkDateRange(input.startDate, input.endDate, 'endDate'));
+    await assertMediaReferences([{ field: 'logo', id: input.logo, kind: 'image' }]);
     return createDocument(EducationModel, input);
   },
 
@@ -31,6 +33,7 @@ export const educationService: CrudService<CreateEducationInput, UpdateEducation
     throwIfFieldErrors(
       checkDateRange(input.startDate ?? existing.startDate, input.endDate === undefined ? existing.endDate : input.endDate, 'endDate'),
     );
+    await assertMediaReferences([{ field: 'logo', id: input.logo, kind: 'image' }]);
     return updateByIdOrThrow(EducationModel, id, input, NOT_FOUND_MESSAGE);
   },
 

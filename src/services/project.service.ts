@@ -1,3 +1,4 @@
+import { assertMediaReferences } from './media.service.js';
 import { ConflictError, ValidationError } from '../errors/app-error.js';
 import { ProjectModel } from '../models/project.model.js';
 import {
@@ -13,6 +14,7 @@ import { applyManualOrder, getNextOrder } from './shared/manual-order.js';
 import { toApiDocument } from '../utils/serialize.utils.js';
 import { MAX_SLUG_LENGTH, slugify } from '../utils/slug.utils.js';
 
+import type { MediaReference } from './media.service.js';
 import type { CrudService } from './shared/crud-service.types.js';
 import type { CreateProjectInput, UpdateProjectInput } from '../validators/project.validator.js';
 
@@ -42,6 +44,13 @@ async function generateUniqueSlug(title: string): Promise<string> {
   throw new ConflictError(SLUG_TAKEN_MESSAGE);
 }
 
+function projectMediaReferences(input: UpdateProjectInput): MediaReference[] {
+  return [
+    { field: 'coverImage', id: input.coverImage, kind: 'image' },
+    ...(input.gallery ?? []).map((id, index): MediaReference => ({ field: `gallery.${index}`, id, kind: 'image' })),
+  ];
+}
+
 export const projectService: CrudService<CreateProjectInput, UpdateProjectInput> = {
   list: (query) => findPage(ProjectModel, manualOrderSort, query),
 
@@ -52,6 +61,7 @@ export const projectService: CrudService<CreateProjectInput, UpdateProjectInput>
     if (input.slug !== undefined && (await isSlugTaken(input.slug))) {
       throw new ConflictError(SLUG_TAKEN_MESSAGE);
     }
+    await assertMediaReferences(projectMediaReferences(input));
     const slug = input.slug ?? (await generateUniqueSlug(input.title));
     const order = await getNextOrder(ProjectModel);
     return withDuplicateKeyAsConflict(createDocument(ProjectModel, { ...input, slug, order }), SLUG_TAKEN_MESSAGE);
@@ -61,6 +71,7 @@ export const projectService: CrudService<CreateProjectInput, UpdateProjectInput>
     if (input.slug !== undefined && (await isSlugTaken(input.slug, id))) {
       throw new ConflictError(SLUG_TAKEN_MESSAGE);
     }
+    await assertMediaReferences(projectMediaReferences(input));
     return withDuplicateKeyAsConflict(updateByIdOrThrow(ProjectModel, id, input, NOT_FOUND_MESSAGE), SLUG_TAKEN_MESSAGE);
   },
 

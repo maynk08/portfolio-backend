@@ -45,5 +45,8 @@ export function handleError(error: unknown, req: Request, res: Response, next: N
   if (appError.errors !== undefined) {
     body.errors = appError.errors;
   }
+  if (appError.details !== undefined) {
+    body.details = appError.details;
+  }
   res.status(appError.statusCode).json(body);
 }

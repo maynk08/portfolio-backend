@@ -10,12 +10,15 @@ export interface FieldError {
 export class AppError extends Error {
   readonly statusCode: number;
   readonly errors: FieldError[] | undefined;
+  // Extra structured data the client needs to act on the error, such as what blocks a delete.
+  readonly details: unknown;
 
-  constructor(statusCode: number, message: string, options?: { errors?: FieldError[]; cause?: unknown }) {
+  constructor(statusCode: number, message: string, options?: { errors?: FieldError[]; details?: unknown; cause?: unknown }) {
     super(message, { cause: options?.cause });
     this.name = new.target.name;
     this.statusCode = statusCode;
     this.errors = options?.errors;
+    this.details = options?.details;
   }
 }
 
@@ -44,8 +47,8 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(409, message);
+  constructor(message: string, options?: { details?: unknown }) {
+    super(409, message, options);
   }
 }
 
@@ -64,5 +67,11 @@ export class ValidationError extends AppError {
 export class TooManyRequestsError extends AppError {
   constructor(message = 'Too many requests, please try again later') {
     super(429, message);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string) {
+    super(503, message);
   }
 }

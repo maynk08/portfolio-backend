@@ -1,3 +1,4 @@
+import { assertMediaReferences } from './media.service.js';
 import { CertificationModel } from '../models/certification.model.js';
 import {
   createDocument,
@@ -22,8 +23,9 @@ export const certificationService: CrudService<CreateCertificationInput, UpdateC
 
   getById: async (id) => toApiDocument(await findByIdOrThrow(CertificationModel, id, NOT_FOUND_MESSAGE)),
 
-  create: (input) => {
+  create: async (input) => {
     throwIfFieldErrors(checkDateRange(input.issueDate, input.expiryDate, 'expiryDate'));
+    await assertMediaReferences([{ field: 'badge', id: input.badge, kind: 'image' }]);
     return createDocument(CertificationModel, input);
   },
 
@@ -36,6 +38,7 @@ export const certificationService: CrudService<CreateCertificationInput, UpdateC
         'expiryDate',
       ),
     );
+    await assertMediaReferences([{ field: 'badge', id: input.badge, kind: 'image' }]);
     return updateByIdOrThrow(CertificationModel, id, input, NOT_FOUND_MESSAGE);
   },
 
