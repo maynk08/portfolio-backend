@@ -7,6 +7,7 @@ const validEnv = {
   PORT: '4000',
   MONGODB_URI: 'mongodb://localhost:27017/portfolio',
   LOG_LEVEL: 'debug',
+  JWT_SECRET: 'x'.repeat(32),
 };
 
 describe('parseEnv', () => {
@@ -16,6 +17,7 @@ describe('parseEnv', () => {
       port: 4000,
       mongodbUri: 'mongodb://localhost:27017/portfolio',
       logLevel: 'debug',
+      jwtSecret: 'x'.repeat(32),
     });
   });
 
@@ -35,6 +37,7 @@ describe('parseEnv', () => {
     ['PORT is out of range', { PORT: '70000' }],
     ['MONGODB_URI is not a MongoDB URI', { MONGODB_URI: 'http://localhost:27017' }],
     ['LOG_LEVEL is not an allowed value', { LOG_LEVEL: 'verbose' }],
+    ['JWT_SECRET is shorter than 32 characters', { JWT_SECRET: 'x'.repeat(31) }],
   ])('rejects the config when %s', (_description, override) => {
     expect(() => parseEnv({ ...validEnv, ...override })).toThrow(EnvValidationError);
   });

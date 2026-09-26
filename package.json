@@ -11,6 +11,7 @@
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts | pino-pretty",
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
+    "seed:admin": "tsx --env-file-if-exists=.env src/scripts/seed-admin.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -19,8 +20,11 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
+    "jose": "^6.2.12",
     "mongoose": "^9.10.2",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
@@ -28,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/node": "^22.20.4",
     "@types/supertest": "^7.2.1",

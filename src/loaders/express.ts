@@ -14,6 +14,9 @@ export function createApp(): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  // Only the CMS and portfolio servers call this API, and they forward the visitor's IP in X-Forwarded-For.
+  // Trusting loopback makes `req.ip` that visitor IP, which rate limiting keys on. Revisit when hosting is decided.
+  app.set('trust proxy', 'loopback');
   app.use(requestLogger);
   app.use(helmet());
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
