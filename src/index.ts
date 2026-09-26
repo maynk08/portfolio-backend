@@ -4,9 +4,11 @@ import { connectDatabase } from './loaders/database.js';
 import { createApp } from './loaders/express.js';
 import { startServer } from './loaders/server.js';
 import { registerShutdownHandlers } from './loaders/shutdown.js';
+import { ensureDefaultContent } from './services/default-content.service.js';
 
 async function main(): Promise<void> {
   await connectDatabase(config.mongodbUri);
+  await ensureDefaultContent();
   const server = await startServer(createApp(), config.port);
   registerShutdownHandlers(server);
   logger.info({ port: config.port, nodeEnv: config.nodeEnv }, 'Server listening');

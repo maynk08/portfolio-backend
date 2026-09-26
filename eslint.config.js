@@ -25,6 +25,7 @@ export default tseslint.config(
       'no-var': 'error',
       'prefer-const': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'import-x/no-default-export': 'error',
       'import-x/order': [
@@ -36,6 +37,11 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // Test helpers use a type parameter to describe the response body a test expects to read.
+    files: ['tests/**/*.ts'],
+    rules: { '@typescript-eslint/no-unnecessary-type-parameters': 'off' },
   },
   {
     files: ['eslint.config.js', '*.config.ts'],

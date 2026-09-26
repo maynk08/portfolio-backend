@@ -4,23 +4,45 @@ import type { FieldError } from '../errors/app-error.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { z } from 'zod';
 
-const WHOLE_BODY_FIELD = 'body';
+type RequestPart = 'body' | 'params' | 'query';
 
-function toFieldErrors(error: z.ZodError): FieldError[] {
+function toFieldErrors(error: z.ZodError, part: RequestPart): FieldError[] {
   return error.issues.map((issue) => ({
-    field: issue.path.length > 0 ? issue.path.join('.') : WHOLE_BODY_FIELD,
+    field: issue.path.length > 0 ? issue.path.join('.') : part,
     message: issue.message,
   }));
 }
 
-// Replaces `req.body` with the parsed result, so unknown fields are stripped before any controller sees them.
+function parseOrThrow(schema: z.ZodType, value: unknown, part: RequestPart): unknown {
+  const result = schema.safeParse(value);
+  if (!result.success) {
+    throw new ValidationError(toFieldErrors(result.error, part));
+  }
+  return result.data;
+}
+
+// Each validator replaces the request part with the parsed result, so unknown fields are stripped
+// and defaults applied before any controller sees the data.
+
 export function validateBody(schema: z.ZodType) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      throw new ValidationError(toFieldErrors(result.error));
-    }
-    req.body = result.data;
+    req.body = parseOrThrow(schema, req.body, 'body');
+    next();
+  };
+}
+
+export function validateParams(schema: z.ZodType) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    req.params = parseOrThrow(schema, req.params, 'params') as Request['params'];
+    next();
+  };
+}
+
+export function validateQuery(schema: z.ZodType) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const query = parseOrThrow(schema, req.query, 'query');
+    // Express 5 exposes `req.query` as a getter, so it has to be redefined rather than assigned.
+    Object.defineProperty(req, 'query', { value: query, writable: true, enumerable: true, configurable: true });
     next();
   };
 }

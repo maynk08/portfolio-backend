@@ -10,7 +10,7 @@ const adminSchema = new Schema(
     sessionVersion: { type: Number, required: true, default: 0 },
     lastLoginAt: { type: Date, default: null },
   },
-  { timestamps: true },
+  { timestamps: true, collection: 'admins' },
 );
 
 export type Admin = InferSchemaType<typeof adminSchema>;
