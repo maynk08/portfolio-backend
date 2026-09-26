@@ -2,8 +2,10 @@ import { Router } from 'express';
 
 import { adminRouter } from './admin.routes.js';
 import { healthRouter } from './health.routes.js';
+import { publicRouter } from './public.routes.js';
 
 export const rootRouter = Router();
 
 rootRouter.use('/health', healthRouter);
 rootRouter.use('/api/admin', adminRouter);
+rootRouter.use('/api/public', publicRouter);

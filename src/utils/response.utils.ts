@@ -13,8 +13,8 @@ export function sendSuccess(res: Response, data: unknown, options: { statusCode?
   res.status(options.statusCode ?? HTTP_OK).json(body);
 }
 
-export function sendCreated(res: Response, data: unknown): void {
-  sendSuccess(res, data, { statusCode: HTTP_CREATED });
+export function sendCreated(res: Response, data: unknown, options: { message?: string } = {}): void {
+  sendSuccess(res, data, { ...options, statusCode: HTTP_CREATED });
 }
 
 export function sendPaginated(res: Response, items: unknown[], pagination: PaginationMeta): void {
