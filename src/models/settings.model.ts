@@ -4,6 +4,8 @@ import type { InferSchemaType } from 'mongoose';
 
 export const THEMES = ['dark', 'light'] as const;
 
+export type Theme = (typeof THEMES)[number];
+
 const settingsSchema = new Schema(
   {
     theme: { type: String, enum: THEMES, required: true, default: 'dark' },

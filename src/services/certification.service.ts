@@ -16,7 +16,7 @@ import type { CreateCertificationInput, UpdateCertificationInput } from '../vali
 import type { PipelineStage } from 'mongoose';
 
 const NOT_FOUND_MESSAGE = 'Certification not found';
-const NEWEST_ISSUED_FIRST: PipelineStage[] = [{ $sort: { issueDate: -1, _id: -1 } }];
+export const NEWEST_ISSUED_FIRST: PipelineStage[] = [{ $sort: { issueDate: -1, _id: -1 } }];
 
 export const certificationService: CrudService<CreateCertificationInput, UpdateCertificationInput> = {
   list: (query) => findPage(CertificationModel, NEWEST_ISSUED_FIRST, query),
