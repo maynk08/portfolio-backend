@@ -119,6 +119,15 @@ describe('POST /media/:id/complete', () => {
   });
 });
 
+describe('GET /media/upload-status', () => {
+  it('says whether storage is configured', async () => {
+    expect(dataOf(await client.get('/media/upload-status'))).toEqual({ isConfigured: true });
+
+    fakeStorage.isConfigured = false;
+    expect(dataOf(await client.get('/media/upload-status'))).toEqual({ isConfigured: false });
+  });
+});
+
 describe('GET /media', () => {
   it('lists finished uploads, newest first, and filters by kind', async () => {
     const first = await uploadFile();

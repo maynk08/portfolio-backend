@@ -1,3 +1,4 @@
+import { isStorageConfigured } from '../lib/storage/index.js';
 import * as mediaService from '../services/media.service.js';
 import { sendCreated, sendPaginated, sendSuccess } from '../utils/response.utils.js';
 
@@ -36,4 +37,9 @@ export async function deleteMediaHandler(req: Request<IdParams>, res: Response):
   const { force } = req.query as unknown as DeleteMediaQuery;
   await mediaService.deleteMedia(req.params.id, { force });
   sendSuccess(res, null, { message: 'File deleted' });
+}
+
+// Lets the CMS tell the admin that uploads are not set up yet, before they try.
+export function getUploadStatusHandler(_req: Request, res: Response): void {
+  sendSuccess(res, { isConfigured: isStorageConfigured() });
 }
