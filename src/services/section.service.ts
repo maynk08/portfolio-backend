@@ -1,4 +1,4 @@
-import { NotFoundError } from '../errors/app-error.js';
+import { NotFoundError, ValidationError } from '../errors/app-error.js';
 import { SECTION_KEYS, SectionModel } from '../models/section.model.js';
 import { toApiDocument } from '../utils/serialize.utils.js';
 
@@ -35,6 +35,18 @@ export async function ensureDefaultSections(): Promise<void> {
 export async function listSections(): Promise<ApiDocument<StoredDocument<Section>>[]> {
   const sections = await SectionModel.find().sort({ order: 1 }).lean();
   return sections.map((section) => toApiDocument(section));
+}
+
+// Saves the display order. The hero is the top of the page (and holds its main heading), so it must stay first.
+export async function reorderSections(keys: SectionKey[]): Promise<void> {
+  const isCompleteList = new Set(keys).size === keys.length && keys.length === SECTION_KEYS.length;
+  if (!isCompleteList) {
+    throw new ValidationError([{ field: 'keys', message: 'Must list every section exactly once' }]);
+  }
+  if (keys[0] !== 'hero') {
+    throw new ValidationError([{ field: 'keys', message: 'The hero must stay first' }]);
+  }
+  await SectionModel.bulkWrite(keys.map((key, index) => ({ updateOne: { filter: { key }, update: { $set: { order: index } } } })));
 }
 
 export async function updateSection(key: SectionKey, input: UpdateSectionInput): Promise<ApiDocument<StoredDocument<Section>>> {

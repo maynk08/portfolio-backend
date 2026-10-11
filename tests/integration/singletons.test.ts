@@ -167,3 +167,53 @@ describe('sections', () => {
     expect(response.status).toBe(422);
   });
 });
+
+describe('section order', () => {
+  const reordered = ['hero', 'projects', 'about', 'experience', 'skills', 'education', 'certifications', 'contact'];
+
+  async function listKeys(): Promise<string[]> {
+    return ((await client.get('/sections')).body.data as { key: string }[]).map((section) => section.key);
+  }
+
+  it('saves the new display order', async () => {
+    const response = await client.patch('/sections/order', { keys: reordered });
+
+    expect(response.status).toBe(200);
+    expect(await listKeys()).toEqual(reordered);
+  });
+
+  it.each([
+    ['a section is missing', reordered.slice(0, -1)],
+    ['a section appears twice', [...reordered.slice(0, -1), 'about']],
+  ])('rejects the order when %s, changing nothing', async (_case, keys) => {
+    const before = await listKeys();
+
+    const response = await client.patch('/sections/order', { keys });
+
+    expect(response.status).toBe(422);
+    expect(response.body.errors?.[0]).toEqual({ field: 'keys', message: 'Must list every section exactly once' });
+    expect(await listKeys()).toEqual(before);
+  });
+
+  it('keeps the hero first', async () => {
+    const response = await client.patch('/sections/order', { keys: ['about', 'hero', ...reordered.slice(3)].concat('projects') });
+
+    expect(response.status).toBe(422);
+    expect(response.body.errors?.[0]).toEqual({ field: 'keys', message: 'The hero must stay first' });
+  });
+
+  it('rejects unknown section keys', async () => {
+    const response = await client.patch('/sections/order', { keys: [...reordered.slice(0, -1), 'blog'] });
+
+    expect(response.status).toBe(422);
+  });
+
+  it('requires the admin login', async () => {
+    const { default: request } = await import('supertest');
+    const { createApp } = await import('../../src/loaders/express.js');
+
+    const response = await request(createApp()).patch('/api/admin/sections/order').send({ keys: reordered });
+
+    expect(response.status).toBe(401);
+  });
+});
