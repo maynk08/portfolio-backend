@@ -187,7 +187,7 @@ function toPublicCertification(certification: StoredDocument<Certification>, med
 export async function getPublicSite(): Promise<PublicSite> {
   const [settings, profile, sections] = await Promise.all([
     SettingsModel.findOne().select('theme').lean(),
-    ProfileModel.findOne().select('name socialLinks resume').lean(),
+    ProfileModel.findOne().select('name headline photo socialLinks resume').lean(),
     findVisibleSections(),
   ]);
   if (settings === null || profile === null) {
@@ -197,11 +197,13 @@ export async function getPublicSite(): Promise<PublicSite> {
   const hasContent = await Promise.all(
     sections.map(async (section) => !isListSection(section.key) || (await LIST_SECTION_HAS_CONTENT[section.key]()) !== null),
   );
-  const media = await loadPublicMedia([profile.resume]);
+  const media = await loadPublicMedia([profile.photo, profile.resume]);
 
   return {
     theme: settings.theme,
     name: profile.name,
+    headline: profile.headline,
+    photo: media.image(profile.photo),
     nav: sections.filter((_section, index) => hasContent[index]).map((section) => ({ key: section.key, heading: section.heading })),
     socialLinks: toPublicSocialLinks(profile),
     resume: media.document(profile.resume),

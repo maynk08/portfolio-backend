@@ -31,6 +31,9 @@ export interface PublicLanguage {
 export interface PublicSite {
   theme: Theme;
   name: string;
+  // For page descriptions and share images.
+  headline: string;
+  photo: PublicImage | null;
   // Visible sections that have something to show, in display order.
   nav: { key: SectionKey; heading: string }[];
   socialLinks: PublicSocialLink[];

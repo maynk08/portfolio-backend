@@ -53,7 +53,8 @@ async function createOneOfEverything(): Promise<void> {
 }
 
 describe('GET /api/public/site', () => {
-  it('returns the theme, name, social links and resume', async () => {
+  it('returns the theme, name, headline, photo, social links and resume', async () => {
+    const photo = await createReadyMedia('image/webp', { url: 'https://cdn.example.com/me.webp', altText: 'Me', width: 400, height: 400 });
     const resume = await createReadyMedia('application/pdf', { url: 'https://cdn.example.com/cv.pdf', fileName: 'Mayank CV.pdf' });
     await SettingsModel.updateOne({}, { $set: { theme: 'light' } });
     await ProfileModel.updateOne(
@@ -61,6 +62,8 @@ describe('GET /api/public/site', () => {
       {
         $set: {
           name: 'Mayank',
+          headline: 'Full-stack engineer',
+          photo,
           resume,
           socialLinks: [
             { platform: 'github', url: 'https://github.com/example' },
@@ -76,6 +79,8 @@ describe('GET /api/public/site', () => {
     expect(site).toEqual({
       theme: 'light',
       name: 'Mayank',
+      headline: 'Full-stack engineer',
+      photo: { url: 'https://cdn.example.com/me.webp', altText: 'Me', width: 400, height: 400 },
       nav: [
         { key: 'hero', heading: 'Home' },
         { key: 'about', heading: 'About' },
@@ -107,11 +112,24 @@ describe('GET /api/public/site', () => {
     ]);
   });
 
-  it('hides the resume when the file is hidden', async () => {
-    const resume = await createReadyMedia('application/pdf', { isVisible: false });
-    await ProfileModel.updateOne({}, { $set: { resume } });
+  it('hides the photo and resume when their files are hidden', async () => {
+    const [photo, resume] = await Promise.all([
+      createReadyMedia('image/png', { isVisible: false }),
+      createReadyMedia('application/pdf', { isVisible: false }),
+    ]);
+    await ProfileModel.updateOne({}, { $set: { photo, resume } });
 
-    expect((await getSite()).resume).toBeNull();
+    const site = await getSite();
+
+    expect(site.photo).toBeNull();
+    expect(site.resume).toBeNull();
+  });
+
+  it('returns an empty headline and no photo for a new profile', async () => {
+    const site = await getSite();
+
+    expect(site.headline).toBe('');
+    expect(site.photo).toBeNull();
   });
 });
 
