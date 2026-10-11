@@ -117,6 +117,18 @@ function toPublicProfile(profile: StoredDocument<Profile>, media: PublicMediaLoo
   };
 }
 
+// About shows the text, the photo and the visible details; with none of them the section is left out of the page and
+// the nav, like an empty list section.
+function hasAboutContent(profile: PublicProfile): boolean {
+  return (
+    profile.about.trim() !== '' ||
+    profile.photo !== null ||
+    profile.location !== null ||
+    profile.yearsOfExperience !== null ||
+    profile.languages.length > 0
+  );
+}
+
 function toPublicExperience(experience: StoredDocument<Experience>, media: PublicMediaLookup): PublicExperience {
   return {
     id: experience._id.toString(),
@@ -187,17 +199,23 @@ function toPublicCertification(certification: StoredDocument<Certification>, med
 export async function getPublicSite(): Promise<PublicSite> {
   const [settings, profile, sections] = await Promise.all([
     SettingsModel.findOne().select('theme').lean(),
-    ProfileModel.findOne().select('name headline photo socialLinks resume').lean(),
+    findProfile(),
     findVisibleSections(),
   ]);
-  if (settings === null || profile === null) {
+  if (settings === null) {
     throw new Error(MISSING_SINGLETON_MESSAGE);
   }
 
-  const hasContent = await Promise.all(
-    sections.map(async (section) => !isListSection(section.key) || (await LIST_SECTION_HAS_CONTENT[section.key]()) !== null),
-  );
   const media = await loadPublicMedia([profile.photo, profile.resume]);
+  const hasAbout = hasAboutContent(toPublicProfile(profile, media));
+  const hasContent = await Promise.all(
+    sections.map(async (section) => {
+      if (section.key === 'about') {
+        return hasAbout;
+      }
+      return !isListSection(section.key) || (await LIST_SECTION_HAS_CONTENT[section.key]()) !== null;
+    }),
+  );
 
   return {
     theme: settings.theme,
@@ -239,16 +257,22 @@ async function findHomeItems(shownKeys: Set<SectionKey>): Promise<HomeItems> {
   return { experiences, featuredProjects, visibleProjectCount, skillGroups, education, certifications };
 }
 
-// Returns null for a list section with nothing to show, so it is left out of the page.
-function buildSection(section: StoredDocument<Section>, items: HomeItems, media: PublicMediaLookup): PublicSection | null {
+// Returns null for a section with nothing to show, so it is left out of the page.
+function buildSection(
+  section: StoredDocument<Section>,
+  items: HomeItems,
+  media: PublicMediaLookup,
+  profile: PublicProfile,
+): PublicSection | null {
   const base = { heading: section.heading, settings: (section.settings ?? {}) as Record<string, unknown> };
   const unlessEmpty = (built: PublicSection & { items: unknown[] }): PublicSection | null => (built.items.length > 0 ? built : null);
 
   switch (section.key) {
     case 'hero':
-    case 'about':
     case 'contact':
       return { key: section.key, ...base };
+    case 'about':
+      return hasAboutContent(profile) ? { key: 'about', ...base } : null;
     case 'experience':
       return unlessEmpty({ key: 'experience', ...base, items: items.experiences.map((item) => toPublicExperience(item, media)) });
     case 'projects':
@@ -291,9 +315,10 @@ export async function getPublicHome(): Promise<PublicHome> {
     ...items.certifications.map((certification) => certification.badge),
   ]);
 
+  const publicProfile = toPublicProfile(profile, media);
   return {
-    profile: toPublicProfile(profile, media),
-    sections: sections.flatMap((section) => buildSection(section, items, media) ?? []),
+    profile: publicProfile,
+    sections: sections.flatMap((section) => buildSection(section, items, media, publicProfile) ?? []),
   };
 }
 

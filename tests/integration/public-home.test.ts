@@ -41,9 +41,10 @@ async function hideSection(key: SectionKey): Promise<void> {
   await SectionModel.updateOne({ key }, { $set: { isVisible: false } });
 }
 
-// One visible item in every list section, so all eight sections have something to show.
+// About text and one visible item in every list section, so all eight sections have something to show.
 async function createOneOfEverything(): Promise<void> {
   await Promise.all([
+    ProfileModel.updateOne({}, { $set: { about: 'Hello' } }),
     ExperienceModel.create({ company: 'Acme', role: 'Engineer', startDate: '2024-01' }),
     ProjectModel.create({ title: 'Site', slug: 'site', isFeatured: true }),
     SkillGroupModel.create({ name: 'Backend', skills: [{ name: 'Node.js' }] }),
@@ -134,7 +135,7 @@ describe('GET /api/public/site', () => {
 });
 
 describe('GET /api/public/home', () => {
-  it('returns the default profile and only the sections that never need items', async () => {
+  it('returns the default profile with only the hero and contact sections', async () => {
     const home = await getHome();
 
     expect(home).toEqual({
@@ -154,10 +155,37 @@ describe('GET /api/public/home', () => {
       },
       sections: [
         { key: 'hero', heading: 'Home', settings: {} },
-        { key: 'about', heading: 'About', settings: {} },
         { key: 'contact', heading: 'Contact', settings: {} },
       ],
     });
+  });
+
+  it.each([
+    ['About text', { about: 'I build things.' }],
+    ['a visible detail', { location: { value: 'Berlin', isVisible: true } }],
+    ['visible languages', { languages: { value: [{ name: 'English' }], isVisible: true } }],
+  ])('shows About on the page and in the nav once it has %s', async (_case, fields) => {
+    await ProfileModel.updateOne({}, { $set: fields });
+
+    const [home, site] = await Promise.all([getHome(), getSite()]);
+
+    expect(home.sections.map((section) => section.key)).toEqual(['hero', 'about', 'contact']);
+    expect(site.nav.map((item) => item.key)).toEqual(['hero', 'about', 'contact']);
+  });
+
+  it('leaves About out when it only has blank text, hidden details or a photo that cannot be shown', async () => {
+    const photo = await createReadyMedia('image/png', { isVisible: false });
+    await ProfileModel.updateOne(
+      {},
+      {
+        $set: { about: '  \n ', photo, location: { value: 'Berlin', isVisible: false }, yearsOfExperience: { value: 5, isVisible: false } },
+      },
+    );
+
+    const [home, site] = await Promise.all([getHome(), getSite()]);
+
+    expect(home.sections.map((section) => section.key)).toEqual(['hero', 'contact']);
+    expect(site.nav.map((item) => item.key)).toEqual(['hero', 'contact']);
   });
 
   it('shows optional profile details only when they are switched on', async () => {
